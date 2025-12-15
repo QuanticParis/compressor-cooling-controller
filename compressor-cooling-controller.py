@@ -12,7 +12,7 @@ SYLVIA.connect()
 PIN_VALVE_CONTROL = 14 # pin that is connected to transistor
 output_valve_control = LED(PIN_VALVE_CONTROL)
 
-OIL_TEMP_THRESHOLD = 320 # x10 Celcius
+OIL_TEMP_THRESHOLD = 321 # x10 Celcius
 COMPRESSOR_ON = 0x001
 COMPRESSOR_OFF = 0x00FF
 
