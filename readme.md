@@ -12,6 +12,9 @@ code chantier: 7523
 # ssh to pi
 ssh quantic@cryostat-raspberry
 
+# acticate controller environment
+source ~/venvs/controller/bin/activate
+
 # run script in background
 nohup python compressor-cooling-controller.py > myscript.log 2>&1 &
 

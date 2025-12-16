@@ -31,7 +31,7 @@ except Exception as e:
 PIN_VALVE_CONTROL = 14  # pin that is connected to transistor
 output_valve_control = LED(PIN_VALVE_CONTROL)
 
-OIL_TEMP_THRESHOLD = 321  # x10 Celcius
+OIL_TEMP_THRESHOLD = 260  # x10 Celcius
 COMPRESSOR_ON = 0x001
 COMPRESSOR_OFF = 0x00FF
 
@@ -46,8 +46,10 @@ sylvia = ModbusTcpClient(
 )  # this IP is enforced on SYLVIA compressor
 sylvia.connect()
 
+go_to_cold_loop = False
+#output_valve_control.on()
 
-if 0:
+if go_to_cold_loop:
     # compressors off
     boris.write_register(address=1, value=COMPRESSOR_OFF)
     sylvia.write_register(address=1, value=COMPRESSOR_OFF)
@@ -68,36 +70,40 @@ while True:
     boris_state = (boris.read_input_registers(address=1)).registers[0]
     sylvia_state = (sylvia.read_input_registers(address=1)).registers[0]
 
+    # get oil temperature
     boris_oil_temp = (boris.read_input_registers(address=42)).registers[0]
     sylvia_oil_temp = (sylvia.read_input_registers(address=42)).registers[0]
+
+    # valve status
+    is_on_cold_loop = int(output_valve_control.is_lit)
 
     # --- InfluxDB Logging ---
     if write_api:
         try:
             p_boris_temp = (
                 Point("oil_temperature")
-                .tag("compressor", "boris")
+                .tag("compressor", "Boris")
                 .field("value", boris_oil_temp / 10.0)
             )
             p_sylvia_temp = (
                 Point("oil_temperature")
-                .tag("compressor", "sylvia")
+                .tag("compressor", "Sylvia")
                 .field("value", sylvia_oil_temp / 10.0)
             )
             p_boris_state = (
                 Point("compressor_state")
-                .tag("compressor", "boris")
+                .tag("compressor", "Boris")
                 .field("value", boris_state)
             )
             p_sylvia_state = (
                 Point("compressor_state")
-                .tag("compressor", "sylvia")
+                .tag("compressor", "Sylvia")
                 .field("value", sylvia_state)
             )
             p_valve_state = (
                 Point("valve_state")
                 .tag("script", "compressor-cooling")
-                .field("is_on_cold_loop", int(output_valve_control.is_lit))
+                .field("is_on_cold_loop", is_on_cold_loop)
             )
             p_heartbeat = (
                 Point("controller")
@@ -122,13 +128,23 @@ while True:
         except Exception as e:
             print(f"An unexpected error occurred during InfluxDB write: {e}")
 
-    if boris_state == STATE_RUNNING_CODE:
-        if boris_oil_temp > OIL_TEMP_THRESHOLD:
-            output_valve_control.off()  # switch to running water
+    # only switch to running water if on cold loop
+    if is_on_cold_loop:
+        # only consider compressor temp if compressor running
+        if boris_state == STATE_RUNNING_CODE:
+            if boris_oil_temp > OIL_TEMP_THRESHOLD:
+                boris.write_register(address=1, value=COMPRESSOR_OFF)
+                output_valve_control.off()  # switch to running water
+                sleep(10)
+                boris.write_register(address=1, value=COMPRESSOR_ON)
 
-    if sylvia_state == STATE_RUNNING_CODE:
-        if sylvia_oil_temp > OIL_TEMP_THRESHOLD:
-            output_valve_control.off()
+        # only consider compressor temp if compressor running
+        if sylvia_state == STATE_RUNNING_CODE:
+            if sylvia_oil_temp > OIL_TEMP_THRESHOLD:
+                sylvia.write_register(address=1, value=COMPRESSOR_OFF)
+                output_valve_control.off()
+                sleep(10)
+                sylvia.write_register(address=1, value=COMPRESSOR_ON)
 
     sleep(1)
 
