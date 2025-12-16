@@ -1,6 +1,9 @@
 # copy script from local folder to Pi
 scp ~/Documents/Travail/Projects/Compressor-cooling-controller/github/compressor-cooling-controller/compressor-cooling-controller.py quantic@cryostat-raspberry:~/Desktop/
 
+# copy script from Pi to local
+scp quantic@cryostat-raspberry:~/Desktop/compressor-cooling-controller.py ~/Documents/Travail/Projects/Compressor-cooling-controller/github/compressor-cooling-controller/
+
 # donner la clé à influxdb:
 
 Sur la raspberry copier le fichier `.env.dist` dans `.env` (`cp .env.dist .env`) et mettre le token influx dedans.
