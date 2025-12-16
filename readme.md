@@ -12,6 +12,15 @@ code chantier: 7523
 # ssh to pi
 ssh quantic@cryostat-raspberry
 
+# run script in background
+nohup python compressor-cooling-controller.py > myscript.log 2>&1 &
+
+# check process is running
+ps aux | grep compressor-cooling-controller.py
+
+# kill process ?
+pkill -f compressor-cooling-controller.py
+
 # dongle ip addresses
 SYLVIA: 
 192.168.0.2
@@ -29,15 +38,4 @@ sudo ip link set eth1 up
 
 sudo ip addr add 192.168.1.1/24 dev eth2
 sudo ip link set eth2 up
-```
-
-go to VS code, select cryostat-raspberry
-
-run python script: 
-```
-from gpiozero import Button, LED
-
-PIN_VALVE_CONTROL = 1
-output_valve_control = LED(PIN_VALVE_CONTROL)
-output_valve_control.off()
 ```

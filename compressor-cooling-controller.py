@@ -11,6 +11,7 @@ import os
 load_dotenv()
 
 STATE_RUNNING_CODE = 3  # 3 means running
+
 INFLUXDB_URL = "https://monitoring-quantic.phys.ens.fr:9086"
 INFLUXDB_TOKEN = os.getenv("INFLUXDB_TOKEN")
 INFLUXDB_ORG = "quantic"  # Remplacer par votre organisation
@@ -46,7 +47,7 @@ sylvia = ModbusTcpClient(
 sylvia.connect()
 
 
-if 1:
+if 0:
     # compressors off
     boris.write_register(address=1, value=COMPRESSOR_OFF)
     sylvia.write_register(address=1, value=COMPRESSOR_OFF)
