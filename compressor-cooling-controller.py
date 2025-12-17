@@ -80,16 +80,14 @@ def poll_oil_temperature(client):
 def turn_off_compressor(client):
     try:
         client.write_register(address=1, value=COMPRESSOR_OFF)
-    except BaseException as e:
+    except Exception as e:
         print(e)
-    pass
 
 def turn_on_compressor(client):
     try:
         client.write_register(address=1, value=COMPRESSOR_ON)
-    except BaseException as e:
+    except Exception as e:
         print(e)
-    pass
 
 go_to_cold_loop = True
 #output_valve_control.on()
