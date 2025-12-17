@@ -77,6 +77,20 @@ def poll_oil_temperature(client):
         print(f"Exception during Modbus read of compressor state: {e}")
         return None
 
+def turn_off_compressor(client):
+    try:
+        client.write_register(address=1, value=COMPRESSOR_OFF)
+    except BaseException as e:
+        print(e)
+    pass
+
+def turn_on_compressor(client):
+    try:
+        client.write_register(address=1, value=COMPRESSOR_ON)
+    except BaseException as e:
+        print(e)
+    pass
+
 go_to_cold_loop = True
 #output_valve_control.on()
 
@@ -86,16 +100,16 @@ sylvia = create_sylvia_compressor_connection()
 
 if go_to_cold_loop:
     # compressors off
-    boris.write_register(address=1, value=COMPRESSOR_OFF)
-    sylvia.write_register(address=1, value=COMPRESSOR_OFF)
+    turn_off_compressor(boris)
+    turn_off_compressor(sylvia)
 
     # switch to cold water loop
     output_valve_control.on()
     sleep(105)  # time it takes for valves to rotate from Eau de Ville to Cold loop
 
     # compressors back on
-    boris.write_register(address=1, value=COMPRESSOR_ON)
-    sylvia.write_register(address=1, value=COMPRESSOR_ON)
+    turn_on_compressor(boris)
+    turn_on_compressor(sylvia)
     sleep(10)
 
 # initiate times of last good connection
@@ -235,23 +249,22 @@ while True:
         except Exception as e:
             print(f"An unexpected error occurred during InfluxDB write: {e}")
 
+    # === switching logic ===
+    # only consider compressor temp if compressor running
+    boris_needs_to_switch_to_running_water = (boris_state == STATE_RUNNING_CODE and boris_oil_temp >= OIL_TEMP_THRESHOLD)
+    sylvia_needs_to_switch_to_running_water = (sylvia_state == STATE_RUNNING_CODE and sylvia_oil_temp >= OIL_TEMP_THRESHOLD)
     # only switch to running water if on cold loop
-    if is_on_cold_loop:
-        # only consider compressor temp if compressor running
+    switch_to_running_water = is_on_cold_loop and (boris_needs_to_switch_to_running_water or sylvia_needs_to_switch_to_running_water)
+    if switch_to_running_water:
+        turn_off_compressor(boris)
+        turn_off_compressor(sylvia)
+        output_valve_control.off() # switch to running water
+        sleep(10)
+        # turn on compressors if they were running already
         if boris_state == STATE_RUNNING_CODE:
-            if boris_oil_temp >= OIL_TEMP_THRESHOLD:
-                boris.write_register(address=1, value=COMPRESSOR_OFF)
-                output_valve_control.off()  # switch to running water
-                sleep(10)
-                boris.write_register(address=1, value=COMPRESSOR_ON)
-
-        # only consider compressor temp if compressor running
+            turn_on_compressor(boris)
         if sylvia_state == STATE_RUNNING_CODE:
-            if sylvia_oil_temp >= OIL_TEMP_THRESHOLD:
-                sylvia.write_register(address=1, value=COMPRESSOR_OFF)
-                output_valve_control.off()
-                sleep(10)
-                sylvia.write_register(address=1, value=COMPRESSOR_ON)
+            turn_on_compressor(sylvia)
 
     sleep(1)
 
